@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Compra</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f8fafc;
+            padding-bottom: 80px;
+        }
+        .header {
+            background: #2563eb;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 12px;
+            background: #2563eb;
+            color: white;
+        }
+        .btn:active { background: #1d4ed8; }
+        .btn-secondary { background: #64748b; }
+        .btn-danger { background: #ef4444; }
+        .nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0;
+            z-index: 100;
+        }
+        .nav-btn {
+            background: none;
+            border: none;
+            padding: 8px 16px;
+            font-size: 12px;
+            cursor: pointer;
+            color: #64748b;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .nav-btn.active { color: #2563eb; }
+        .view { display: none; }
+        .view.active { display: block; }
+        .product-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .product-icon { font-size: 40px; }
+        .product-info { flex: 1; }
+        .product-name { font-weight: 600; margin-bottom: 4px; }
+        .product-meta { font-size: 13px; color: #64748b; }
+        .product-price { font-size: 18px; font-weight: 700; color: #2563eb; }
+        .btn-icon {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 8px;
+            background: #f8fafc;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            padding: 20px;
+        }
+        .modal.active { display: flex; align-items: center; justify-content: center; }
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+        }
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .form-group {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            padding: 20px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #64748b;
+        }
+        .budget-tracker {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .budget-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .spent-amount {
+            font-size: 28px;
+            font-weight: 700;
+            color: #2563eb;
+        }
+        .progress-bar {
+            height: 12px;
+            background: #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #2563eb);
+            transition: width 0.3s;
+        }
+        .shopping-item {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .shopping-item.checked { opacity: 0.5; }
+        .shopping-item.checked .product-name { text-decoration: line-through; }
+        .shopping-checkbox { width: 24px; height: 24px; }
+        .search-result {
+            padding: 16px;
+            border-bottom: 1px solid #e2e8f0;
+            cursor: pointer;
+        }
+        #scanner-container {
+            width: 100%;
+            max-width: 500px;
+        }
+        .scanner-hint {
+            text-align: center;
+            padding: 16px;
+            color: #64748b;
+            background: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- SCANNER MODAL -->
+    <div id="scanner-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Escanear código de barras</h2>
+                <button class="btn-close" onclick="app.closeScanner()">✕</button>
+            </div>
+            <div id="scanner-container"></div>
+            <div class="scanner-hint">
+                Apunta la cámara al código de barras del producto
+            </div>
+            <div style="padding:20px;">
+                <button class="btn btn-secondary" onclick="app.manualAdd()">
+                    No funciona - Añadir manualmente
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRODUCT MODAL -->
+    <div id="product-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Añadir Producto</h2>
+                <button class="btn-close" onclick="app.closeProductModal()">✕</button>
+            </div>
+            <form onsubmit="return app.saveProduct(event)">
+                <div class="form-group">
+                    <label>Nombre del producto *</label>
+                    <input type="text" id="product-name" required placeholder="Pan Wasa con Sésamo">
+                    <div id="product-info" style="margin-top:8px;font-size:13px;color:#10b981;"></div>
+                </div>
+                <div class="form-group">
+                    <label>Supermercado *</label>
+                    <select id="product-store" required>
+                        <option value="mercadona">Mercadona</option>
+                        <option value="lidl">Lidl</option>
+                        <option value="sclat">Sclat</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Precio (€) *</label>
+                    <input type="number" id="product-price" step="0.01" min="0" required placeholder="2.45">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="app.closeProductModal()">Cancelar</button>
+                    <button type="submit" class="btn">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SEARCH MODAL -->
+    <div id="search-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Añadir a lista</h2>
+                <button class="btn-close" onclick="app.closeSearchModal()">✕</button>
+            </div>
+            <div style="padding:20px;">
+                <input type="text" id="quick-search" placeholder="Buscar..." oninput="app.quickSearch()" 
+                       style="width:100%;padding:12px;border:2px solid #e2e8f0;border-radius:8px;">
+            </div>
+            <div id="search-results" style="max-height:400px;overflow-y:auto;"></div>
+            <div style="padding:20px;">
+                <button class="btn" onclick="app.scanFromShopping()">
+                    📷 Escanear código de barras
+                </button>
+                <button class="btn btn-secondary" onclick="app.addNewProduct()">
+                    ➕ Añadir nuevo producto
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NAVIGATION -->
+    <nav class="nav">
+        <button class="nav-btn active" onclick="app.switchView('home')">
+            <div style="font-size:24px;">🏠</div>
+            <div>Inicio</div>
+        </button>
+        <button class="nav-btn" onclick="app.switchView('products')">
+            <div style="font-size:24px;">📦</div>
+            <div>Productos</div>
+        </button>
+        <button class="nav-btn" onclick="app.switchView('shopping')">
+            <div style="font-size:24px;">🛒</div>
+            <div>Comprar</div>
+        </button>
+    </nav>
+
+    <!-- VIEW: HOME -->
+    <div id="view-home" class="view active">
+        <div class="header">
+            <h1>🛒 Mi Lista de Compra</h1>
+        </div>
+        <div class="container">
+            <button class="btn" onclick="app.openScanner()">
+                📷 Escanear código de barras
+            </button>
+            <button class="btn btn-secondary" onclick="app.addNewProduct()">
+                ➕ Añadir manualmente
+            </button>
+            
+            <div style="background:white;border-radius:12px;padding:20px;margin:20px 0;">
+                <div style="display:flex;justify-content:space-around;">
+                    <div style="text-align:center;">
+                        <div style="font-size:32px;font-weight:700;color:#2563eb;" id="home-products">0</div>
+                        <div style="font-size:13px;color:#64748b;">Productos</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:32px;font-weight:700;color:#2563eb;" id="home-shopping">0</div>
+                        <div style="font-size:13px;color:#64748b;">En lista</div>
+                    </div>
+                </div>
+            </div>
+
+            <h2 style="margin-bottom:12px;">Últimos productos</h2>
+            <div id="recent-products">
+                <p class="empty-state">Aún no has añadido productos</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW: PRODUCTS -->
+    <div id="view-products" class="view">
+        <div class="header">
+            <h1>📦 Mis Productos</h1>
+        </div>
+        <div class="container">
+            <input type="text" id="search-products" placeholder="Buscar..." oninput="app.renderProducts()" 
+                   style="width:100%;padding:12px;border:2px solid #e2e8f0;border-radius:12px;margin-bottom:16px;">
+            
+            <button class="btn" onclick="app.openScanner()">
+                📷 Escanear código de barras
+            </button>
+            <button class="btn btn-secondary" onclick="app.addNewProduct()">
+                ➕ Añadir manualmente
+            </button>
+
+            <div id="products-list">
+                <p class="empty-state">No tienes productos guardados</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW: SHOPPING -->
+    <div id="view-shopping" class="view">
+        <div class="header">
+            <h1>🛒 Modo Compra</h1>
+        </div>
+        <div class="container">
+            <div style="background:white;border-radius:12px;padding:16px;margin-bottom:20px;">
+                <label style="font-weight:600;margin-bottom:8px;display:block;">Supermercado:</label>
+                <select id="current-store" style="width:100%;padding:10px;border:2px solid #e2e8f0;border-radius:8px;">
+                    <option value="mercadona">Mercadona</option>
+                    <option value="lidl">Lidl</option>
+                    <option value="sclat">Sclat</option>
+                </select>
+            </div>
+
+            <div class="budget-tracker">
+                <div class="budget-header">
+                    <span>Gastado</span>
+                    <span class="spent-amount" id="spent">0,00€</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:14px;color:#64748b;">
+                    <span>Estimado: <span id="budget">0,00€</span></span>
+                    <span id="remaining">0,00€</span>
+                </div>
+            </div>
+
+            <div style="display:flex;gap:12px;margin-bottom:20px;">
+                <button class="btn" style="flex:1;" onclick="app.openSearchModal()">
+                    ➕ Añadir
+                </button>
+                <button class="btn btn-danger" style="flex:1;" onclick="app.clearList()">
+                    🗑️ Limpiar
+                </button>
+            </div>
+
+            <div id="shopping-list">
+                <p class="empty-state">No hay productos en tu lista</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Librería moderna para escanear -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    
+    <script>
+        class ShoppingApp {
+            constructor() {
+                this.products = JSON.parse(localStorage.getItem('products') || '[]');
+                this.shoppingList = JSON.parse(localStorage.getItem('shoppingList') || '[]');
+                this.scanner = null;
+                this.currentBarcode = null;
+                this.scanMode = 'add'; // 'add' o 'shopping'
+                this.render();
+            }
+
+            switchView(view) {
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.getElementById(`view-${view}`).classList.add('active');
+                document.querySelectorAll('.nav-btn').forEach((btn, i) => {
+                    btn.classList.toggle('active', ['home','products','shopping'][i] === view);
+                });
+                this.render();
+            }
+
+            async openScanner(mode = 'add') {
+                this.scanMode = mode;
+                document.getElementById('scanner-modal').classList.add('active');
+                
+                try {
+                    this.scanner = new Html5QrcodeScanner("scanner-container", {
+                        fps: 10,
+                        qrbox: { width: 250, height: 250 },
+                        rememberLastUsedCamera: true,
+                        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+                        formatsToSupport: [ 
+                            Html5QrcodeSupportedFormats.EAN_13,
+                            Html5QrcodeSupportedFormats.EAN_8,
+                            Html5QrcodeSupportedFormats.UPC_A,
+                            Html5QrcodeSupportedFormats.UPC_E
+                        ]
+                    });
+                    
+                    this.scanner.render(
+                        (decodedText) => this.handleBarcodeScan(decodedText),
+                        (error) => {} // Ignorar errores de escaneo continuo
+                    );
+                } catch (err) {
+                    console.error('Error scanner:', err);
+                    alert('No se pudo iniciar la cámara.\n\nAsegúrate de:\n1. Dar permisos de cámara\n2. Usar Chrome o Safari\n3. Estar en HTTPS\n\nPuedes añadir productos manualmente.');
+                    this.closeScanner();
+                }
+            }
+
+            closeScanner() {
+                if (this.scanner) {
+                    try {
+                        this.scanner.clear();
+                    } catch(e) {}
+                    this.scanner = null;
+                }
+                document.getElementById('scanner-modal').classList.remove('active');
+                document.getElementById('scanner-container').innerHTML = '';
+            }
+
+            async handleBarcodeScan(barcode) {
+                this.currentBarcode = barcode;
+                this.closeScanner();
+                
+                // Buscar si ya existe
+                const existing = this.products.find(p => p.barcode === barcode);
+                
+                if (existing) {
+                    if (this.scanMode === 'shopping') {
+                        this.addToShopping(existing.id);
+                        this.toast(`✅ ${existing.name} añadido`);
+                    } else {
+                        this.toast(`Ya tienes este producto: ${existing.name}`);
+                    }
+                } else {
+                    // Producto nuevo - buscar en API
+                    this.toast('🔍 Buscando producto...');
+                    const info = await this.fetchProductInfo(barcode);
+                    
+                    document.getElementById('product-name').value = info?.name || '';
+                    document.getElementById('product-store').value = document.getElementById('current-store')?.value || 'mercadona';
+                    document.getElementById('product-price').value = '';
+                    
+                    if (info) {
+                        document.getElementById('product-info').textContent = '✓ Información encontrada en base de datos';
+                    } else {
+                        document.getElementById('product-info').textContent = '⚠️ Producto no encontrado - introduce los datos';
+                    }
+                    
+                    document.getElementById('product-modal').classList.add('active');
+                    setTimeout(() => document.getElementById('product-price').focus(), 100);
+                }
+            }
+
+            async fetchProductInfo(barcode) {
+                try {
+                    const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+                    const data = await res.json();
+                    if (data.status === 1 && data.product) {
+                        return {
+                            name: data.product.product_name || data.product.product_name_es || ''
+                        };
+                    }
+                } catch (e) {
+                    console.error('Error API:', e);
+                }
+                return null;
+            }
+
+            manualAdd() {
+                this.closeScanner();
+                this.addNewProduct();
+            }
+
+            addNewProduct() {
+                this.closeSearchModal();
+                document.getElementById('product-name').value = '';
+                document.getElementById('product-store').value = document.getElementById('current-store')?.value || 'mercadona';
+                document.getElementById('product-price').value = '';
+                document.getElementById('product-info').textContent = '';
+                document.getElementById('product-modal').classList.add('active');
+                setTimeout(() => document.getElementById('product-name').focus(), 100);
+            }
+
+            closeProductModal() {
+                document.getElementById('product-modal').classList.remove('active');
+                this.currentBarcode = null;
+            }
+
+            saveProduct(e) {
+                e.preventDefault();
+                const product = {
+                    id: Date.now().toString(),
+                    barcode: this.currentBarcode || '',
+                    name: document.getElementById('product-name').value.trim(),
+                    store: document.getElementById('product-store').value,
+                    price: parseFloat(document.getElementById('product-price').value),
+                    created: new Date().toISOString()
+                };
+
+                this.products.push(product);
+                localStorage.setItem('products', JSON.stringify(this.products));
+                this.closeProductModal();
+                this.toast('✅ Producto guardado');
+                
+                if (this.scanMode === 'shopping') {
+                    this.addToShopping(product.id);
+                }
+                
+                this.render();
+                return false;
+            }
+
+            deleteProduct(id) {
+                if (confirm('¿Eliminar este producto?')) {
+                    this.products = this.products.filter(p => p.id !== id);
+                    localStorage.setItem('products', JSON.stringify(this.products));
+                    this.render();
+                }
+            }
+
+            scanFromShopping() {
+                this.closeSearchModal();
+                this.openScanner('shopping');
+            }
+
+            openSearchModal() {
+                document.getElementById('search-modal').classList.add('active');
+                document.getElementById('quick-search').value = '';
+                document.getElementById('quick-search').focus();
+                this.quickSearch();
+            }
+
+            closeSearchModal() {
+                document.getElementById('search-modal').classList.remove('active');
+            }
+
+            quickSearch() {
+                const query = document.getElementById('quick-search').value.toLowerCase().trim();
+                
+                if (query === '') {
+                    document.getElementById('search-results').innerHTML = '<p class="empty-state">Escribe para buscar</p>';
+                    return;
+                }
+
+                const results = this.products.filter(p => p.name.toLowerCase().includes(query));
+                
+                if (results.length === 0) {
+                    document.getElementById('search-results').innerHTML = '<p class="empty-state">No encontrado</p>';
+                } else {
+                    const html = results.map(p => `
+                        <div class="search-result" onclick="app.addToShopping('${p.id}'); app.closeSearchModal(); app.toast('✅ Añadido');">
+                            <div style="font-weight:600;">${p.name}</div>
+                            <div style="font-size:13px;color:#64748b;">${this.formatPrice(p.price)}</div>
+                        </div>
+                    `).join('');
+                    document.getElementById('search-results').innerHTML = html;
+                }
+            }
+
+            addToShopping(productId) {
+                const existing = this.shoppingList.find(item => item.id === productId);
+                if (existing) {
+                    existing.quantity++;
+                } else {
+                    this.shoppingList.push({ id: productId, quantity: 1, checked: false });
+                }
+                localStorage.setItem('shoppingList', JSON.stringify(this.shoppingList));
+                this.renderShopping();
+            }
+
+            toggleChecked(id) {
+                const item = this.shoppingList.find(i => i.id === id);
+                if (item) {
+                    item.checked = !item.checked;
+                    localStorage.setItem('shoppingList', JSON.stringify(this.shoppingList));
+                    this.renderShopping();
+                }
+            }
+
+            removeFromShopping(id) {
+                this.shoppingList = this.shoppingList.filter(i => i.id !== id);
+                localStorage.setItem('shoppingList', JSON.stringify(this.shoppingList));
+                this.renderShopping();
+            }
+
+            clearList() {
+                if (confirm('¿Limpiar toda la lista?')) {
+                    this.shoppingList = [];
+                    localStorage.setItem('shoppingList', JSON.stringify(this.shoppingList));
+                    this.renderShopping();
+                }
+            }
+
+            render() {
+                this.renderHome();
+                this.renderProducts();
+                this.renderShopping();
+            }
+
+            renderHome() {
+                document.getElementById('home-products').textContent = this.products.length;
+                document.getElementById('home-shopping').textContent = this.shoppingList.length;
+
+                const recent = this.products.slice(-5).reverse();
+                const html = recent.length === 0
+                    ? '<p class="empty-state">Aún no has añadido productos</p>'
+                    : recent.map(p => `
+                        <div class="product-card">
+                            <div class="product-icon">📦</div>
+                            <div class="product-info">
+                                <div class="product-name">${p.name}</div>
+                                <div class="product-meta">${p.store}</div>
+                            </div>
+                            <div class="product-price">${this.formatPrice(p.price)}</div>
+                        </div>
+                    `).join('');
+                document.getElementById('recent-products').innerHTML = html;
+            }
+
+            renderProducts() {
+                const query = document.getElementById('search-products')?.value.toLowerCase() || '';
+                const filtered = query ? this.products.filter(p => p.name.toLowerCase().includes(query)) : this.products;
+                
+                const html = filtered.length === 0
+                    ? '<p class="empty-state">No hay productos</p>'
+                    : filtered.map(p => `
+                        <div class="product-card">
+                            <div class="product-icon">📦</div>
+                            <div class="product-info">
+                                <div class="product-name">${p.name}</div>
+                                <div class="product-meta">${p.store}${p.barcode ? ' • 🏷️' : ''}</div>
+                            </div>
+                            <div class="product-price">${this.formatPrice(p.price)}</div>
+                            <button class="btn-icon" onclick="app.deleteProduct('${p.id}')">🗑️</button>
+                        </div>
+                    `).join('');
+                document.getElementById('products-list').innerHTML = html;
+            }
+
+            renderShopping() {
+                if (this.shoppingList.length === 0) {
+                    document.getElementById('shopping-list').innerHTML = '<p class="empty-state">No hay productos</p>';
+                    document.getElementById('spent').textContent = '0,00€';
+                    document.getElementById('budget').textContent = '0,00€';
+                    document.getElementById('remaining').textContent = '0,00€';
+                    document.getElementById('progress').style.width = '0%';
+                    return;
+                }
+
+                const html = this.shoppingList.map(item => {
+                    const product = this.products.find(p => p.id === item.id);
+                    if (!product) return '';
+                    return `
+                        <div class="shopping-item ${item.checked ? 'checked' : ''}">
+                            <input type="checkbox" class="shopping-checkbox" ${item.checked ? 'checked' : ''} onchange="app.toggleChecked('${item.id}')">
+                            <div class="product-icon">📦</div>
+                            <div class="product-info">
+                                <div class="product-name">${product.name}</div>
+                                <div class="product-meta">${product.store}</div>
+                            </div>
+                            <div class="product-price">${this.formatPrice(product.price)}</div>
+                            <button class="btn-icon" onclick="app.removeFromShopping('${item.id}')">🗑️</button>
+                        </div>
+                    `;
+                }).join('');
+                document.getElementById('shopping-list').innerHTML = html;
+
+                const total = this.shoppingList.reduce((sum, item) => {
+                    const product = this.products.find(p => p.id === item.id);
+                    return sum + (product ? product.price : 0);
+                }, 0);
+
+                const spent = this.shoppingList.filter(item => item.checked).reduce((sum, item) => {
+                    const product = this.products.find(p => p.id === item.id);
+                    return sum + (product ? product.price : 0);
+                }, 0);
+
+                document.getElementById('spent').textContent = this.formatPrice(spent);
+                document.getElementById('budget').textContent = this.formatPrice(total);
+                document.getElementById('remaining').textContent = this.formatPrice(total - spent);
+                const percent = total > 0 ? (spent / total) * 100 : 0;
+                document.getElementById('progress').style.width = Math.min(percent, 100) + '%';
+            }
+
+            formatPrice(price) {
+                return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(price);
+            }
+
+            toast(msg) {
+                const toast = document.createElement('div');
+                toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1e293b;color:white;padding:12px 24px;border-radius:8px;z-index:10001;max-width:90%;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+                toast.textContent = msg;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 2500);
+            }
+        }
+
+        const app = new ShoppingApp();
+    </script>
+</body>
+</html>
